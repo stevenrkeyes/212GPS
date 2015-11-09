@@ -100,14 +100,29 @@ alph = (1/(1+0.016667))
 tStart = time.time()
 timestamp = time.time()+0.0001 - tStart
 timestampOld = timestamp
-maxTime = 60
+maxTime = 10
 
 # initialize these values to something for a fallback
+# in case no circles are detected (in which case the
+# previous values are used)
+# and as an initial value for the low pass filter
+# (note: the result is that the first few values are
+# skewed to the (0,0,0) point)
+# todo: wait to initialize these until actual circles
+# are found for the first time
 [x, y, phi] = [0, 0, 0]
 [xg, yg, rg] = [0, 0, 0]
 [xr, yr, rr] = [0, 0, 0]
 
 METERS_PER_PIXEL = 2.0/720
+
+# parameters for low pass filter
+# note: sampling period is estimated, not enforced
+# todo: enforce sampling period or recalculate it
+samplingPeriod = 0.037 #seconds
+cutoffFrequency = 1 #Hz
+alpha = 2 * math.pi * samplingPeriod * cutoffFrequency / (1 + 2 * math.pi * samplingPeriod * cutoffFrequency)
+print alpha
 
 while timestamp<maxTime:
     ####-----------------------------Top View Cam
@@ -177,15 +192,23 @@ while timestamp<maxTime:
                 break
 
         # calculate x, y, and phi METERS_PER_PIXEL
-        x = METERS_PER_PIXEL*(0.5*(xg + xr) - 1280*0.5)
-        y = METERS_PER_PIXEL*-(0.5*(yg + yr) - 720*0.5)
+        xNew = METERS_PER_PIXEL*(0.5*(xg + xr) - 1280*0.5)
+        yNew = METERS_PER_PIXEL*-(0.5*(yg + yr) - 720*0.5)
         # todo: using int to avoid overflow errors; what is a better way to do this?
-        phi = -math.atan2(int(xg) - int(xr), -(int(yg) - int(yr)))
+        phiNew = -math.atan2(int(xg) - int(xr), -(int(yg) - int(yr)))
 
-        # todo: low pass filter
+        # low pass filter implemented as exponentially weighted moving average
+        # filteredValue = alpha*unfilteredValue + (1-alpha)*prevFilteredValue
+        x = alpha * xNew + (1 - alpha) * x
+        y = alpha * yNew + (1 - alpha) * y
+        phi = alpha * phiNew + (1 - alpha) * phi
+
+        # todo: implement a scheme (such as with energy or velocity limits) to filter out outlier measurements
     
     ####-------------------------------------Draw
     if n%1==0:
+        # plot the cirlces found (unfiltered)
+
         # green circle
         cv2.circle(cimg,(xg,yg),rg,(0,255,0),2)
         cv2.circle(cimg,(xg,yg),1,(0,0,0),3)
@@ -197,6 +220,10 @@ while timestamp<maxTime:
         # robot heading
         pntGreen = np.array([xg,yg], np.int32)
         pntRed = np.array([xr,yr], np.int32)
+        pntRobot = np.array([x/METERS_PER_PIXEL + 1280*0.5,
+                             -y/METERS_PER_PIXEL + 720*0.5], np.float32)
+        vectorFwd = np.array([math.cos(phi), -math.sin(phi)], np.float32)
+        vectorLeft = np.array([-math.sin(phi), -math.cos(phi)], np.float32)
         d = pntGreen - pntRed
         dPerp = np.array([-d[1], d[0]], np.int32)
         points = np.array([pntRed*.75 + pntGreen*.25,
@@ -204,6 +231,12 @@ while timestamp<maxTime:
                           pntRed*.25 + pntGreen*.75 + 0.5*dPerp,
                           pntRed*.5 + pntGreen*.5 + 0.7*dPerp,
                           pntRed*.75 + pntGreen*.25 + 0.5*dPerp],np.int32)
+        points = np.array([pntRobot + 15*vectorLeft,
+                           pntRobot + 15*vectorLeft + 30*vectorFwd,
+                           pntRobot + 40*vectorFwd,
+                           pntRobot - 15*vectorLeft + 30*vectorFwd,
+                           pntRobot - 15*vectorLeft], np.int32)
+        print pntRobot
         points.reshape((-1,1,2))
         cv2.fillConvexPoly(cimg,points,(34,139,34))
         
