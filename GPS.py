@@ -2,6 +2,7 @@
 2.12 GPS Vision Server
 Daniel J. Gonzalez - dgonz@mit.edu
 Zack Bright - zbright@mit.edu
+Steven Keyes - srkeyes@mit.edu
 Fall 2015
 """
 
@@ -19,7 +20,7 @@ import math
 ip = '192.168.1.212'
 tStart = time.time()
 timestamp = tStart
-state = [0, 0, 0, 0, 0, 0]
+state = [0, 0, 0]
 
 
 
@@ -28,7 +29,7 @@ class requestHandler(SocketServer.StreamRequestHandler):
         requestForUpdate=self.request.recv(256)
         print 'Connected to Client: ', str(self.client_address)
         while requestForUpdate!='':
-            data1 = ''.join([struct.pack('>H',x) for x in state])
+            data1 = ''.join([struct.pack('>f',x) for x in state])
             data2 = struct.pack('>f',timestamp)
             self.wfile.write(data1+data2)
             requestForUpdate=self.request.recv(256)
@@ -62,7 +63,7 @@ print "Connected to Camera 2."
 
 ########################################    Setup Video Save
 
-writeVid = 0
+writeVid = False
 
 if writeVid:
     fourcc = cv2.VideoWriter_fourcc('m','p','4','v')
@@ -74,6 +75,10 @@ if writeVid:
 def signal_handler(signal, frame):
     print('Closing...')
     server.socket.close()
+    server.disconnect()
+    c1.release()
+    if writeVid:
+        out.release()
     c.stop_capture()
     c.disconnect()
     sys.exit(0)
@@ -95,7 +100,14 @@ alph = (1/(1+0.016667))
 tStart = time.time()
 timestamp = time.time()+0.0001 - tStart
 timestampOld = timestamp
-maxTime = 25
+maxTime = 60
+
+# initialize these values to something for a fallback
+[x, y, phi] = [0, 0, 0]
+[xg, yg, rg] = [0, 0, 0]
+[xr, yr, rr] = [0, 0, 0]
+
+METERS_PER_PIXEL = 2.0/720
 
 while timestamp<maxTime:
     ####-----------------------------Top View Cam
@@ -104,35 +116,97 @@ while timestamp<maxTime:
     cimg = im
     hsvimg = cv2.cvtColor(cimg,cv2.COLOR_BGR2HSV)
 
-    # make black img of same size as hsvimg
-    rimg = 255-np.zeros_like(hsvimg)
-    gimg = 255-np.zeros_like(hsvimg)
+    # todo: correct for lens distortion
 
-    for x in range(len(hsvimg[0,:])):
-        for y in range(len(hsvimg[:,0])):
-            hue = hsvimg[y,x][0]
-            if hue < .05 or hue >.95:
-                rimg[y,x] = 0
-            if hue < .40 and hue > .28:
-                gimg[y,x] = 0
+    # Filter the image by hsv into red and green
+    upperRed = np.array([185,255,255])
+    lowerRed = np.array([150,50,50])
+    upperGreen = np.array([80,255,255])
+    lowerGreen = np.array([45,10,10])
 
-    cv2.imshow('red',rimg)
-    cv2.imshow('green',gimg)
+    gmask = cv2.inRange(hsvimg, lowerGreen, upperGreen)
+    rmask = cv2.inRange(hsvimg, lowerRed, upperRed)
+
+    # close the image a bit
+    gmask = cv2.erode(gmask, np.ones((2,2),np.uint8))
+    gmask = cv2.dilate(gmask, np.ones((3,3),np.uint8))
+
+    gimg = cv2.bitwise_and(img,img,mask = gmask)
+    rimg = rmask*img
+
+    # find the best circle candidates using the hsv image
     circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,
-        minDist = 2000,param1=350,param2=7,minRadius=70,maxRadius=100)# DO NOT CHANGE, WORKS PERFECTLY
-    circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,
-        minDist = 2000,param1=350,param2=7,minRadius=5,maxRadius=50) #zack edit of parameters
+        minDist = 20,param1=350,param2=7,minRadius=12,maxRadius=17)
 
     if circles is None:
-        [x, y, r] = [0, 0, 0]
+        # return [0,0,0], indicating an error
+        # todo: actually, it would be better to do something else, such as [-1,-1,-1] or just return the last datapoint instead 
+        pass # keep all the values the same as the previous iteration
     else:
+        # extract the coordinates and radii from the circles found by hough transform
         circles = np.uint16(np.around(circles))
-        [x, y, r] = circles[0][0]
+
+        # go through the circles until a green circle is found and a red circle is found
+        # (in case there are other circles on the board, like a circular clump of snow)
+        # (hopefully, this will be after just two iterations)
+        redCircleFound = False
+        greenCircleFound = False
+        # note: I'm limiting it to 3 circles
+        # todo: limit the number of circles to check to a small number, but do it in a way that won't
+        # throw an out of range error if no circles are found
+        for circle in circles[0][0:3]:
+            [xCircle, yCircle, rCircle] = circle
+
+            # create a mask of the circle to check the pixels of the original image
+            #circleMask = np.zeros_like(img)
+            #cv2.circle(circleMask,(x0,y0),r0,(255,255,255),-1)
+
+            # use the mask to extract the pixels from the original image
+            #gimg = cv2.bitwise_and(img,circleMask)
+
+            # figure out which of these circles is the red circle and which is the grn circle
+            # todo: do something smarter than just checking the center pixel
+            centerPixel = hsvimg[yCircle:yCircle+1, xCircle:xCircle+1]
+            if cv2.inRange(centerPixel, lowerGreen, upperGreen):#45 < hue < 80:
+                [xg, yg, rg] = [xCircle, yCircle, rCircle]
+                greenCircleFound = True
+            elif cv2.inRange(centerPixel, lowerRed, upperRed):
+                [xr, yr, rr] = [xCircle, yCircle, rCircle]
+                redCircleFound = True
+            if redCircleFound and greenCircleFound:
+                break
+
+        # calculate x, y, and phi METERS_PER_PIXEL
+        x = METERS_PER_PIXEL*(0.5*(xg + xr) - 1280*0.5)
+        y = METERS_PER_PIXEL*-(0.5*(yg + yr) - 720*0.5)
+        # todo: using int to avoid overflow errors; what is a better way to do this?
+        phi = -math.atan2(int(xg) - int(xr), -(int(yg) - int(yr)))
+
+        # todo: low pass filter
     
     ####-------------------------------------Draw
     if n%1==0:
-        cv2.circle(cimg,(x,y),r,(0,255,0),2)
-        cv2.circle(cimg,(x,y),2,(0,0,255),3)
+        # green circle
+        cv2.circle(cimg,(xg,yg),rg,(0,255,0),2)
+        cv2.circle(cimg,(xg,yg),1,(0,0,0),3)
+
+        # red circle
+        cv2.circle(cimg,(xr,yr),rr,(0,0,255),2)
+        cv2.circle(cimg,(xr,yr),1,(0,0,0),3)
+
+        # robot heading
+        pntGreen = np.array([xg,yg], np.int32)
+        pntRed = np.array([xr,yr], np.int32)
+        d = pntGreen - pntRed
+        dPerp = np.array([-d[1], d[0]], np.int32)
+        points = np.array([pntRed*.75 + pntGreen*.25,
+                          pntRed*.25 + pntGreen*.75,
+                          pntRed*.25 + pntGreen*.75 + 0.5*dPerp,
+                          pntRed*.5 + pntGreen*.5 + 0.7*dPerp,
+                          pntRed*.75 + pntGreen*.25 + 0.5*dPerp],np.int32)
+        points.reshape((-1,1,2))
+        cv2.fillConvexPoly(cimg,points,(34,139,34))
+        
         cv2.putText(cimg,'Velocity: '+str(int(v))+'  px/second', (20,20),
                     cv2.FONT_HERSHEY_SIMPLEX, .625, (50,50,0),1 )
        
@@ -145,12 +219,8 @@ while timestamp<maxTime:
         if ch == ord('q'):
             break
 
-    x2 = 0
-    y2 = 0
-    r2 = 0
-
     # update state
-    state = (x, 472 - y, r*r*math.pi, x2, y2, r2*r2*math.pi)
+    state = (x, y, phi)
     timestamp = time.time() - tStart
     dt = (timestamp-timestampOld)
     vx = (int(x)-xOld)/dt
