@@ -100,7 +100,7 @@ alph = (1/(1+0.016667))
 tStart = time.time()
 timestamp = time.time()+0.0001 - tStart
 timestampOld = timestamp
-maxTime = 12
+maxTime = 120
 
 # initialize these values to something for a fallback
 # in case no circles are detected (in which case the
@@ -110,6 +110,7 @@ maxTime = 12
 # skewed to the (0,0,0) point)
 # todo: wait to initialize these until actual circles
 # are found for the first time
+stateInitialized = False
 [x, y, phi] = [0, 0, 0]
 [xg, yg, rg] = [0, 0, 0]
 [xr, yr, rr] = [0, 0, 0]
@@ -133,20 +134,20 @@ while timestamp<maxTime:
     # todo: correct for lens distortion
 
     # Filter the image by hsv into red and green
-    upperRed = np.array([185,255,255])
-    lowerRed = np.array([150,50,50])
+    upperRed = np.array([185,255,220])
+    lowerRed = np.array([155,180,80])
     upperGreen = np.array([80,130,150])
     lowerGreen = np.array([45,30,50])
 
-    gmask = cv2.inRange(hsvimg, lowerGreen, upperGreen)
-    rmask = cv2.inRange(hsvimg, lowerRed, upperRed)
+    #gmask = cv2.inRange(hsvimg, lowerGreen, upperGreen)
+    #rmask = cv2.inRange(hsvimg, lowerRed, upperRed)
 
     # close the image a bit
-    gmask = cv2.erode(gmask, np.ones((2,2),np.uint8))
-    gmask = cv2.dilate(gmask, np.ones((3,3),np.uint8))
+    #gmask = cv2.erode(gmask, np.ones((2,2),np.uint8))
+    #gmask = cv2.dilate(gmask, np.ones((3,3),np.uint8))
 
-    gimg = cv2.bitwise_and(img,img,mask = gmask)
-    rimg = rmask*img
+    #gimg = cv2.bitwise_and(img,img,mask = gmask)
+    #rimg = rmask*img
 
     # find the best circle candidates using the hsv image
     circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,
@@ -182,7 +183,6 @@ while timestamp<maxTime:
             # todo: do something smarter than just checking the center pixel; for example, average of all pixels
             centerPixel = hsvimg[yCircle:yCircle+1, xCircle:xCircle+1]
             if cv2.inRange(centerPixel, lowerGreen, upperGreen):
-                print centerPixel
                 [xg, yg, rg] = [xCircle, yCircle, rCircle]
                 greenCircleFound = True
             elif cv2.inRange(centerPixel, lowerRed, upperRed):
@@ -197,17 +197,28 @@ while timestamp<maxTime:
         # todo: using int to avoid overflow errors; what is a better way to do this?
         phiNew = -math.atan2(int(xg) - int(xr), -(int(yg) - int(yr)))
 
-        # low pass filter implemented as exponentially weighted moving average
-        # filteredValue = alpha*unfilteredValue + (1-alpha)*prevFilteredValue
-        x = alpha * xNew + (1 - alpha) * x
-        y = alpha * yNew + (1 - alpha) * y
-        phi = alpha * phiNew + (1 - alpha) * phi
+        # filter the values unless this is the first value detected
+        if stateInitialized == False:
+            x = xNew
+            y = yNew
+            phi = phiNew
+            stateInitialized = True
+        else:
+            # low pass filter implemented as exponentially weighted moving average
+            # filteredValue = alpha*unfilteredValue + (1-alpha)*prevFilteredValue
+            x = alpha * xNew + (1 - alpha) * x
+            y = alpha * yNew + (1 - alpha) * y
+            phi = alpha * phiNew + (1 - alpha) * phi
 
         # todo: implement a scheme (such as with energy or velocity limits) to filter out outlier measurements
     
     ####-------------------------------------Draw
     if n%1==0:
         # plot the cirlces found (unfiltered)
+
+        # todo: handle the case that no circles are found or that x,y,phi are not initialized
+        # (as would be the case if no circles have been found for the first few frames, like 
+        # before a robot has been placed on the field)
 
         # green circle
         cv2.circle(cimg,(xg,yg),rg,(0,255,0),2)
