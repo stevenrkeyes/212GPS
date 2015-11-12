@@ -100,7 +100,7 @@ alph = (1/(1+0.016667))
 tStart = time.time()
 timestamp = time.time()+0.0001 - tStart
 timestampOld = timestamp
-maxTime = 120
+maxTime = 12
 
 # initialize these values to something for a fallback
 # in case no circles are detected (in which case the
@@ -135,8 +135,8 @@ while timestamp<maxTime:
     # Filter the image by hsv into red and green
     upperRed = np.array([185,255,255])
     lowerRed = np.array([150,50,50])
-    upperGreen = np.array([80,255,255])
-    lowerGreen = np.array([45,10,10])
+    upperGreen = np.array([80,130,150])
+    lowerGreen = np.array([45,30,50])
 
     gmask = cv2.inRange(hsvimg, lowerGreen, upperGreen)
     rmask = cv2.inRange(hsvimg, lowerRed, upperRed)
@@ -179,9 +179,10 @@ while timestamp<maxTime:
             #gimg = cv2.bitwise_and(img,circleMask)
 
             # figure out which of these circles is the red circle and which is the grn circle
-            # todo: do something smarter than just checking the center pixel
+            # todo: do something smarter than just checking the center pixel; for example, average of all pixels
             centerPixel = hsvimg[yCircle:yCircle+1, xCircle:xCircle+1]
-            if cv2.inRange(centerPixel, lowerGreen, upperGreen):#45 < hue < 80:
+            if cv2.inRange(centerPixel, lowerGreen, upperGreen):
+                print centerPixel
                 [xg, yg, rg] = [xCircle, yCircle, rCircle]
                 greenCircleFound = True
             elif cv2.inRange(centerPixel, lowerRed, upperRed):
