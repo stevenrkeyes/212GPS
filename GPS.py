@@ -100,7 +100,7 @@ alph = (1/(1+0.016667))
 tStart = time.time()
 timestamp = time.time()+0.0001 - tStart
 timestampOld = timestamp
-maxTime = 10
+maxTime = 120
 
 # initialize these values to something for a fallback
 # in case no circles are detected (in which case the
@@ -122,7 +122,6 @@ METERS_PER_PIXEL = 2.0/720
 samplingPeriod = 0.037 #seconds
 cutoffFrequency = 1 #Hz
 alpha = 2 * math.pi * samplingPeriod * cutoffFrequency / (1 + 2 * math.pi * samplingPeriod * cutoffFrequency)
-print alpha
 
 while timestamp<maxTime:
     ####-----------------------------Top View Cam
@@ -236,7 +235,6 @@ while timestamp<maxTime:
                            pntRobot + 40*vectorFwd,
                            pntRobot - 15*vectorLeft + 30*vectorFwd,
                            pntRobot - 15*vectorLeft], np.int32)
-        print pntRobot
         points.reshape((-1,1,2))
         cv2.fillConvexPoly(cimg,points,(34,139,34))
         
