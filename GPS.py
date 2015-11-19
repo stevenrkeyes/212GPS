@@ -14,6 +14,7 @@ import numpy as np
 import cv2
 import math
 
+import broadcast_server
 
 ########################################	Networking Setup
 # ip = 'localhost'
@@ -35,10 +36,7 @@ class requestHandler(SocketServer.StreamRequestHandler):
             requestForUpdate=self.request.recv(256)
         print('client disconnect')
 
-class broadcastServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
-    pass
-
-server=broadcastServer((ip,2121),requestHandler)
+server=broadcast_server.broadcastServer((ip,2121),requestHandler)
 t = threading.Thread(target=server.serve_forever)
 t.daemon=True
 t.start()
