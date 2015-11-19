@@ -122,14 +122,25 @@ samplingPeriod = 0.037 #seconds
 cutoffFrequency = 1 #Hz
 alpha = 2 * math.pi * samplingPeriod * cutoffFrequency / (1 + 2 * math.pi * samplingPeriod * cutoffFrequency)
 
+# see perspective_test.py for how i generated this
+# todo: automate this
+transformMatrix = np.array([[  1.06056862,      -0.101940609,   -73.3913456   ],
+                            [ -0.00267972449,    0.883415865,     0.185436926 ],
+                            [ -0.0000129947625, -0.000172031174,  1.00000000  ]], np.float32)
+
+print transformMatrix
+size = (1280,720)
+
 while timestamp<maxTime:
     ####-----------------------------Top View Cam
     _,im = c1.read()
+    # Perspective correction
+    im = cv2.warpPerspective(im, transformMatrix, size)
     img = cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
     cimg = im
     hsvimg = cv2.cvtColor(cimg,cv2.COLOR_BGR2HSV)
 
-    # todo: correct for lens distortion
+    # todo: correct for lens distortion (different from perspective correction)
 
     # Filter the image by hsv into red and green
     upperRed = np.array([185,255,220])
@@ -149,7 +160,7 @@ while timestamp<maxTime:
 
     # find the best circle candidates using the hsv image
     circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,
-        minDist = 20,param1=350,param2=7,minRadius=12,maxRadius=17)
+        minDist = 20,param1=350,param2=7,minRadius=9,maxRadius=13)
 
     if circles is None:
         # return [0,0,0], indicating an error
