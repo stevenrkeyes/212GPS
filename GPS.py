@@ -89,10 +89,6 @@ cv2.namedWindow('top', cv2.WINDOW_AUTOSIZE)
 xOld = 0
 yOld = 0
 n = 0
-vOld = 0
-vxOld = 0
-vyOld = 0
-v=0
 alph = (1/(1+0.016667))
 
 tStart = time.time()
@@ -246,9 +242,6 @@ while timestamp<maxTime:
         points.reshape((-1,1,2))
         cv2.fillConvexPoly(cimg,points,(34,139,34))
         
-        cv2.putText(cimg,'Velocity: '+str(int(v))+'  px/second', (20,20),
-                    cv2.FONT_HERSHEY_SIMPLEX, .625, (50,50,0),1 )
-       
         cv2.putText(cimg,str(int(n/timestamp))+' FPS', (550,20),
                     cv2.FONT_HERSHEY_SIMPLEX, .625, (50,0,0),1 )
         cv2.imshow('top',cimg)        
@@ -262,17 +255,9 @@ while timestamp<maxTime:
     state = (x, y, phi)
     timestamp = time.time() - tStart
     dt = (timestamp-timestampOld)
-    vx = (int(x)-xOld)/dt
-    vx = alph*vxOld+(1-alph)*vx#First Order LPF
-    vy = (int(y)-yOld)/dt
-    vy = alph*vyOld+(1-alph)*vy#First Order LPF
-    v = math.sqrt(vx*vx+vy*vy)
     xOld = x
     yOld = y
     timestampOld = timestamp
-    vOld = v
-    vxOld = vx
-    vyOld = vy
     n+=1
 print timestamp/60/60
 print n/timestamp
