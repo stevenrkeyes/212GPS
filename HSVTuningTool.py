@@ -8,17 +8,15 @@ def nothing(x):
 
 c1= cv2.VideoCapture(0)
 
-# print c1.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
-# print c1.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)
-# c1.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT,900) #1080
-# c1.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH,1440) #1920
-# print c1.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT)
-# print c1.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH)
+# todo: implement this, then resize the window
+# set the camera to be wide aspect ratio
+#c1.set(cv2.CAP_PROP_FRAME_HEIGHT,900) #1080
+#c1.set(cv2.CAP_PROP_FRAME_WIDTH,1440) #1920
 
 _,img = c1.read()
 hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
 
-cv2.namedWindow('image')
+cv2.namedWindow('image', cv2.WINDOW_AUTOSIZE)
 
 # create trackbars for color change
 cv2.createTrackbar('H UP','image',0,255,nothing)
@@ -31,6 +29,12 @@ cv2.createTrackbar('V LOW','image',0,255,nothing)
 # create switch for ON/OFF functionality
 switch = '0 : OFF \n1 : ON'
 cv2.createTrackbar(switch, 'image',0,1,nothing)
+
+# set default trackbar positions
+cv2.setTrackbarPos('H UP','image',255)
+cv2.setTrackbarPos('S UP','image',255)
+cv2.setTrackbarPos('V UP','image',255)
+cv2.setTrackbarPos(switch,'image',1)
 
 while(1):
     _,img = c1.read()
