@@ -84,6 +84,11 @@ signal.signal(signal.SIGINT, signal_handler)
 
 ########################################    Main Loop
 
+def distanceFun(coordinatePair):
+    deltaX = coordinatePair[0][0] - coordinatePair[1][0]
+    deltaY = coordinatePair[0][1] - coordinatePair[1][1]
+    return np.hypot(deltaX, deltaY)
+
 cv2.namedWindow('top', cv2.WINDOW_AUTOSIZE)
 
 xOld = 0
@@ -161,6 +166,8 @@ while timestamp<maxTime:
         # note: I'm limiting it to 3 circles
         # todo: limit the number of circles to check to a small number, but do it in a way that won't
         # throw an out of range error if no circles are found
+        possibleRedCircles = []
+        possibleGreenCircles = []
         for circle in circles[0][0:10]:
             [xCircle, yCircle, rCircle] = circle
             #cv2.circle(cimg,(xCircle,yCircle),5,(0,255,255),1)
@@ -176,13 +183,22 @@ while timestamp<maxTime:
             # todo: do something smarter than just checking the center pixel; for example, average of all pixels
             centerPixel = hsvimg[yCircle:yCircle+1, xCircle:xCircle+1]
             if cv2.inRange(centerPixel, lowerGreen, upperGreen):
-                [xg, yg, rg] = [xCircle, yCircle, rCircle]
-                greenCircleFound = True
+                possibleGreenCircles.append([xCircle, yCircle, rCircle])
+                #[xg, yg, rg] = [xCircle, yCircle, rCircle]
             elif cv2.inRange(centerPixel, lowerRed, upperRed):
-                [xr, yr, rr] = [xCircle, yCircle, rCircle]
-                redCircleFound = True
-            if redCircleFound and greenCircleFound:
-                break
+                possibleRedCircles.append([xCircle, yCircle, rCircle])
+                #[xr, yr, rr] = [xCircle, yCircle, rCircle]
+        
+        # evaluate which pair of circles makes the best candiate for the marker, by distance between them
+        possiblePairs = [[gCoords, rCoords] for gCoords in possibleGreenCircles for rCoords in possibleRedCircles]
+        
+        # find the pair that has the minimum distance between them
+        if len(possiblePairs) > 0:
+            closestPair = min(possiblePairs, key=distanceFun)
+            # if that distance is small enough, then those are the points
+            if distanceFun(closestPair) < 75:
+                [xg, yg, rg] = closestPair[0]
+                [xr, yr, rr] = closestPair[1]
 
         # calculate x, y, and phi METERS_PER_PIXEL
         xNew = METERS_PER_PIXEL*(0.5*(xg + xr) - 1280*0.5)
