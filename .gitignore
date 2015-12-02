@@ -1,1 +1,11 @@
+# movie captures
 *.mov
+
+# backups or autosaves
+*~
+
+# python deritus
+*.pyc
+
+#local settings file
+local_settings.py
