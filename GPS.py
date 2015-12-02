@@ -189,16 +189,18 @@ while timestamp<maxTime:
                 possibleRedCircles.append([xCircle, yCircle, rCircle])
                 #[xr, yr, rr] = [xCircle, yCircle, rCircle]
         
-        # evaluate which pair of circles makes the best candiate for the marker, by distance between them
+        # evaluate which pair of circles makes the best candidate for the marker
+        # based on how close the distance between them is to the expected distance
         possiblePairs = [[gCoords, rCoords] for gCoords in possibleGreenCircles for rCoords in possibleRedCircles]
         
-        # find the pair that has the minimum distance between them
+        # only look at pairs that are within a resonable closeness to each other
+        possiblePairs = [c for c in possiblePairs if (45 < distanceFun(c) < 75)]
+        
+        # find the pair whose distance is closest to the expected
         if len(possiblePairs) > 0:
-            closestPair = min(possiblePairs, key=distanceFun)
-            # if that distance is small enough, then those are the points
-            if distanceFun(closestPair) < 75:
-                [xg, yg, rg] = closestPair[0]
-                [xr, yr, rr] = closestPair[1]
+            closestPair = min(possiblePairs, key=lambda c: abs(distanceFun(c) - 60))
+            [xg, yg, rg] = closestPair[0]
+            [xr, yr, rr] = closestPair[1]
 
         # calculate x, y, and phi METERS_PER_PIXEL
         xNew = METERS_PER_PIXEL*(0.5*(xg + xr) - 1280*0.5)
