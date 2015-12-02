@@ -94,7 +94,7 @@ alph = (1/(1+0.016667))
 tStart = time.time()
 timestamp = time.time()+0.0001 - tStart
 timestampOld = timestamp
-maxTime = 120
+maxTime = 120000
 
 # initialize these values to something for a fallback
 # in case no circles are detected (in which case the
@@ -205,13 +205,17 @@ while timestamp<maxTime:
 
         # todo: implement a scheme (such as with energy or velocity limits) to filter out outlier measurements
     
-    
     # calculate the parking spot snow coverage
-    parkingSpotImg = hsvimg[175:175+200,275:275+75]
+    parkingSpotImg = hsvimg[parkingSpotY:parkingSpotY+200,parkingSpotX:parkingSpotX+75]
     #cv2.imshow('park', parkingSpotImg)
     clearPixels = cv2.inRange(parkingSpotImg, lowerParking, upperParking)
-    #cv2.imshow('park2', clearPixels)
-    fractionClear = np.sum(clearPixels) * 1.0 / (255 * np.size(clearPixels))
+    cv2.imshow('park2', clearPixels)
+    # the highest possible sum, if all the parking spot and car are clear
+    #print np.sum(clearPixels)
+    totalPossiblePixels = 2050000
+    fractionClear = np.sum(clearPixels) * 1.0 / totalPossiblePixels
+    # round and limit to 0-100%
+    percentClear = min(100, round(fractionClear, 1)*100)
     
     ####-------------------------------------Draw
     if n%1==0:
@@ -255,7 +259,7 @@ while timestamp<maxTime:
                     cv2.FONT_HERSHEY_SIMPLEX, .625, (50,0,0),1 )
                     
         # indicate what amount of the parking spot is clear
-        cv2.putText(cimg, "Fraction Clear: " + str(round(fractionClear,2)), (50,20), cv2.FONT_HERSHEY_SIMPLEX, .625, (50,0,0),1 )
+        cv2.putText(cimg, "Percent Parking Spot Clear: " + str(percentClear) + "%", (50,20), cv2.FONT_HERSHEY_SIMPLEX, .625, (50,0,0),1 )
         
         cv2.imshow('top',cimg)        
         if writeVid:

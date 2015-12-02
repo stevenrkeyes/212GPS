@@ -1,5 +1,3 @@
-# Note: copy this file to local_settings.py and adjust these settings
-
 import numpy as np
 
 ########################################	Networking Setup
@@ -7,10 +5,13 @@ import numpy as np
 ip = '192.168.1.121'
 
 # Filter for the image by hsv into red and green
-upperRed = np.array([210,255,250])
-lowerRed = np.array([0,130,154])
-upperGreen = np.array([85,95,176])
-lowerGreen = np.array([27,10,120])
+upperRed = np.array([255,255,242])
+lowerRed = np.array([171,119,137])
+upperGreen = np.array([89,109,174])
+lowerGreen = np.array([36,13,111])
+
+upperParking = np.array([255,255,255])
+lowerParking = np.array([0,38,0])
 
 # see perspective_test.py for how i generated this
 # todo: automate this
