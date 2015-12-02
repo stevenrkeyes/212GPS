@@ -161,8 +161,9 @@ while timestamp<maxTime:
         # note: I'm limiting it to 3 circles
         # todo: limit the number of circles to check to a small number, but do it in a way that won't
         # throw an out of range error if no circles are found
-        for circle in circles[0][0:3]:
+        for circle in circles[0][0:10]:
             [xCircle, yCircle, rCircle] = circle
+            #cv2.circle(cimg,(xCircle,yCircle),5,(0,255,255),1)
 
             # create a mask of the circle to check the pixels of the original image
             #circleMask = np.zeros_like(img)
@@ -204,6 +205,14 @@ while timestamp<maxTime:
 
         # todo: implement a scheme (such as with energy or velocity limits) to filter out outlier measurements
     
+    
+    # calculate the parking spot snow coverage
+    parkingSpotImg = hsvimg[175:175+200,275:275+75]
+    #cv2.imshow('park', parkingSpotImg)
+    clearPixels = cv2.inRange(parkingSpotImg, lowerParking, upperParking)
+    #cv2.imshow('park2', clearPixels)
+    fractionClear = np.sum(clearPixels) * 1.0 / (255 * np.size(clearPixels))
+    
     ####-------------------------------------Draw
     if n%1==0:
         # plot the cirlces found (unfiltered)
@@ -244,6 +253,10 @@ while timestamp<maxTime:
         
         cv2.putText(cimg,str(int(n/timestamp))+' FPS', (550,20),
                     cv2.FONT_HERSHEY_SIMPLEX, .625, (50,0,0),1 )
+                    
+        # indicate what amount of the parking spot is clear
+        cv2.putText(cimg, "Fraction Clear: " + str(round(fractionClear,2)), (50,20), cv2.FONT_HERSHEY_SIMPLEX, .625, (50,0,0),1 )
+        
         cv2.imshow('top',cimg)        
         if writeVid:
             out.write(cimg)
@@ -259,6 +272,7 @@ while timestamp<maxTime:
     yOld = y
     timestampOld = timestamp
     n+=1
+        
 print timestamp/60/60
 print n/timestamp
 c1.release()
