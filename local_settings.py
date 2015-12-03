@@ -9,8 +9,11 @@ if computerName == 'yosaffbridge':
 	ip = '192.168.1.212'
 
 	# Filter for the image by hsv into red and green
-	upperRed = np.array([185,255,220])
-	lowerRed = np.array([155,120,50])
+	topUpperRed = np.array([185,255,220])
+	topLowerRed = np.array([155,120,50])
+	botUpperRed = np.array([185,255,220])
+	botLowerRed = np.array([155,120,50])
+	
 	upperGreen = np.array([80,130,150])
 	lowerGreen = np.array([45,30,50])
 
@@ -30,8 +33,11 @@ else: # hostname == 'abraxas'
     ip = '192.168.1.121'
 
     # Filter for the image by hsv into red and green
-    upperRed = np.array([255,255,242])
-    lowerRed = np.array([171,119,137])
+    # note: red hue is set up to wrap around
+    topUpperRed = np.array([255,255,242])
+    topLowerRed = np.array([171,119,137])
+    botUpperRed = np.array([11,255,242])
+    botLowerRed = np.array([0,119,137])
     upperGreen = np.array([89,109,174])
     lowerGreen = np.array([36,13,111])
 

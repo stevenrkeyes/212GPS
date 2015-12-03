@@ -85,8 +85,10 @@ signal.signal(signal.SIGINT, signal_handler)
 ########################################    Main Loop
 
 def distanceFun(coordinatePair):
-    deltaX = coordinatePair[0][0] - coordinatePair[1][0]
-    deltaY = coordinatePair[0][1] - coordinatePair[1][1]
+    # todo: use something faster than python ints but that won't overflow
+    # like numpy int32 or something
+    deltaX = int(coordinatePair[0][0]) - int(coordinatePair[1][0])
+    deltaY = int(coordinatePair[0][1]) - int(coordinatePair[1][1])
     return np.hypot(deltaX, deltaY)
 
 cv2.namedWindow('top', cv2.WINDOW_AUTOSIZE)
@@ -168,8 +170,10 @@ while timestamp<maxTime:
         # throw an out of range error if no circles are found
         possibleRedCircles = []
         possibleGreenCircles = []
-        for circle in circles[0][0:10]:
+        for circle in circles[0][0:20]:
             [xCircle, yCircle, rCircle] = circle
+            
+            # uncomment this line to visualize all detected circles
             #cv2.circle(cimg,(xCircle,yCircle),5,(0,255,255),1)
 
             # create a mask of the circle to check the pixels of the original image
@@ -185,14 +189,15 @@ while timestamp<maxTime:
             if cv2.inRange(centerPixel, lowerGreen, upperGreen):
                 possibleGreenCircles.append([xCircle, yCircle, rCircle])
                 #[xg, yg, rg] = [xCircle, yCircle, rCircle]
-            elif cv2.inRange(centerPixel, lowerRed, upperRed):
+            elif cv2.inRange(centerPixel, botLowerRed, botUpperRed) or \
+                 cv2.inRange(centerPixel, topLowerRed, topUpperRed):
                 possibleRedCircles.append([xCircle, yCircle, rCircle])
                 #[xr, yr, rr] = [xCircle, yCircle, rCircle]
         
         # evaluate which pair of circles makes the best candidate for the marker
         # based on how close the distance between them is to the expected distance
         possiblePairs = [[gCoords, rCoords] for gCoords in possibleGreenCircles for rCoords in possibleRedCircles]
-        
+            
         # only look at pairs that are within a resonable closeness to each other
         possiblePairs = [c for c in possiblePairs if (45 < distanceFun(c) < 75)]
         
