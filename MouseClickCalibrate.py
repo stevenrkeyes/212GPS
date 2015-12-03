@@ -4,11 +4,10 @@ import cv2
 import numpy as np
 from time import sleep
 
-#c1 = cv2.VideoCapture(0)
-c1 = cv2.VideoCapture('testimage.png')
+c1 = cv2.VideoCapture(0)
 
-#c1.set(cv2.CAP_PROP_FRAME_HEIGHT,900) #1080
-#c1.set(cv2.CAP_PROP_FRAME_WIDTH,1440) #1920
+c1.set(cv2.CAP_PROP_FRAME_HEIGHT,900) #1080
+c1.set(cv2.CAP_PROP_FRAME_WIDTH,1440) #1920
 
 cv2.namedWindow('image')
 
@@ -24,6 +23,8 @@ cornerLocations = np.array([[0,0],
 			    [0,720],
 			    [1280,720]], np.float32)
 
+# calculate and print the transformation matrix in a way that is copyable
+# back into a python file
 def printTransformMatrix():
 	global clickList
 	imgpoints = np.array(clickList, np.float32)
@@ -33,6 +34,7 @@ def printTransformMatrix():
 	# why doesn't numpy have a function for this, like matlab's mat2str D:
 	print 'transformMatrix = ' + 'np.array(' + str([list(row) for row in transformMatrix]) + ', np.' + str(np.result_type(transformMatrix)) + ')'
 	
+	_, img = c1.read()
 	size = img.shape[:2][::-1]
 	img_transformed = cv2.warpPerspective(img, transformMatrix, size)
 	
@@ -45,7 +47,7 @@ def getXY(event,x,y,flags,param):
     if event == cv2.EVENT_LBUTTONDOWN:
     	global buttonCount
     	global clickList
-
+        
     	buttonCount+=1
     	if buttonCount<MaxPoints:
     		clickList.append((x,y))
@@ -63,22 +65,15 @@ def getXY(event,x,y,flags,param):
                     cv2.FONT_HERSHEY_SIMPLEX, .625, (0,0,255),1 )
 	    	cv2.imshow('image', img)
 		print ''
-		print 'Transformation matrix calculated. Please paste the following into local settings:'
+		print 'Transformation matrix found. Please paste the following into local_settings.py:\n'
 		printTransformMatrix()
-	    	clickList = []
-	    	buttonCount = 0
-
+		print ''
 
 cv2.setMouseCallback('image',getXY)
 
-_, img = c1.read()
-cv2.putText(img, 'Please click the ' + cornerList[buttonCount] + 'corner.', (100,100),
-                    cv2.FONT_HERSHEY_SIMPLEX, .625, (0,0,255),1 )
-cv2.imshow('image', img)
-
 while (1):
-#	_, img = c1.read()
-	cv2.putText(img, 'Please click the ' + cornerList[buttonCount] + 'corner.', (100,100),
+	_, img = c1.read()
+	cv2.putText(img, 'Please click the ' + cornerList[buttonCount] + ' corner.', (450,400),
                     cv2.FONT_HERSHEY_SIMPLEX, .625, (0,0,255),1 )
 	cv2.imshow('image', img)
 
