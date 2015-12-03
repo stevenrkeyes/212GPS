@@ -218,13 +218,22 @@ while timestamp<maxTime:
             x = xNew
             y = yNew
             phi = phiNew
+            xg_filtered = xg
+            yg_filtered = yg
+            xr_filtered = xr
+            yr_filtered = yr
             stateInitialized = True
         else:
             # low pass filter implemented as exponentially weighted moving average
             # filteredValue = alpha*unfilteredValue + (1-alpha)*prevFilteredValue
             x = alpha * xNew + (1 - alpha) * x
             y = alpha * yNew + (1 - alpha) * y
-            phi = alpha * phiNew + (1 - alpha) * phi
+            xg_filtered = alpha * xg + (1 - alpha) * xg_filtered
+            xr_filtered = alpha * xr + (1 - alpha) * xr_filtered
+            yg_filtered = alpha * yg + (1 - alpha) * yg_filtered
+            yr_filtered = alpha * yr + (1 - alpha) * yr_filtered
+            # phi can't be filtered directly due to wrap-around
+            phi = -math.atan2(int(xg_filtered) - int(xr_filtered), -(int(yg_filtered) - int(yr_filtered)))
 
         # todo: implement a scheme (such as with energy or velocity limits) to filter out outlier measurements
     
